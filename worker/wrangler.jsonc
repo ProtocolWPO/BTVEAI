@@ -1,0 +1,20 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "btveai-vote-api",
+  "main": "src/index.js",
+  "compatibility_date": "2026-07-17",
+  "workers_dev": true,
+  "observability": {
+    "enabled": true
+  },
+  "vars": {
+    "ALLOWED_ORIGINS": "https://btveai.com,https://www.btveai.com,https://protocolwpo.github.io"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "btveai-votes",
+      "database_id": "fcd06c0c-f8ea-4dd2-a3a0-b4efbaa419ab"
+    }
+  ]
+}
