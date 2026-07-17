@@ -1,4 +1,4 @@
-# BTVEAI â€” Bitcoin vs AI
+# BTVEAI — Bitcoin vs AI
 
 Static bilingual website for the **Bitcoin vs AI** project, deployed with GitHub Pages.
 
