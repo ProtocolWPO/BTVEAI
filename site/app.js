@@ -18,33 +18,41 @@ function applyLanguage(language) {
 languageButton?.addEventListener("click", () => applyLanguage(currentLanguage === "en" ? "zh" : "en"));
 applyLanguage(currentLanguage);
 
-const VOTE_KEY = "btveai-daily-browser-votes-v1";
-const dayKey = () => {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-};
+const VOTE_API = (document.querySelector('meta[name="btveai-vote-api"]')?.content || "").replace(/\/$/, "");
+const VISITOR_KEY = "btveai-anonymous-visitor-v1";
+let voteState = { bitcoin: 0, ai: 0, total: 0, votedToday: null };
+let voteLoading = true;
+let voteError = "";
 
-function readVoteHistory() {
-  try {
-    const value = JSON.parse(localStorage.getItem(VOTE_KEY) || "{}");
-    return value && typeof value === "object" ? value : {};
-  } catch {
-    return {};
+function visitorId() {
+  let value = localStorage.getItem(VISITOR_KEY);
+  if (!value) {
+    value = crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}-${Math.random().toString(16).slice(2)}`;
+    localStorage.setItem(VISITOR_KEY, value);
   }
+  return value;
 }
 
-function renderBrowserVote() {
+function voteMessage() {
+  if (voteLoading) return currentLanguage === "zh" ? "正在加载全球投票…" : "Loading global vote…";
+  if (voteError === "rate_limited") return currentLanguage === "zh" ? "今日投票频率过高，请明天再试" : "Daily network vote limit reached. Try again tomorrow.";
+  if (voteError) return currentLanguage === "zh" ? "投票服务暂时不可用，请稍后重试" : "Voting service is temporarily unavailable. Try again shortly.";
+  if (voteState.votedToday) {
+    const choice = voteState.votedToday === "bitcoin" ? (currentLanguage === "zh" ? "比特币" : "Bitcoin") : "AI";
+    return currentLanguage === "zh" ? `今日已投票：${choice} · 明天可再次投票` : `Voted today: ${choice} · Come back tomorrow`;
+  }
+  return currentLanguage === "zh" ? "全球统计 · 今日可匿名投票" : "Global tally · Anonymous vote available today";
+}
+
+function renderGlobalVote() {
   const bitcoinButton = document.querySelector('[data-vote="bitcoin"]');
   const aiButton = document.querySelector('[data-vote="ai"]');
   if (!bitcoinButton || !aiButton) return;
 
-  const history = readVoteHistory();
-  const choices = Object.values(history);
-  const bitcoin = choices.filter((choice) => choice === "bitcoin").length;
-  const ai = choices.filter((choice) => choice === "ai").length;
+  const bitcoin = Number(voteState.bitcoin || 0);
+  const ai = Number(voteState.ai || 0);
   const total = bitcoin + ai;
   const bitcoinPercent = total ? Math.round((bitcoin / total) * 100) : 50;
-  const todayChoice = history[dayKey()];
 
   document.querySelector("[data-bitcoin-count]").textContent = bitcoin.toLocaleString();
   document.querySelector("[data-ai-count]").textContent = ai.toLocaleString();
@@ -52,34 +60,75 @@ function renderBrowserVote() {
   document.querySelector("[data-ai-percent]").textContent = `${100 - bitcoinPercent}%`;
   document.querySelector("[data-vote-meter]").style.width = `${bitcoinPercent}%`;
 
-  bitcoinButton.disabled = Boolean(todayChoice);
-  aiButton.disabled = Boolean(todayChoice);
-  bitcoinButton.classList.toggle("selected", todayChoice === "bitcoin");
-  aiButton.classList.toggle("selected", todayChoice === "ai");
+  const disabled = voteLoading || Boolean(voteState.votedToday) || Boolean(voteError);
+  bitcoinButton.disabled = disabled;
+  aiButton.disabled = disabled;
+  bitcoinButton.classList.toggle("selected", voteState.votedToday === "bitcoin");
+  aiButton.classList.toggle("selected", voteState.votedToday === "ai");
 
   const status = document.querySelector("[data-vote-status]");
-  if (todayChoice) {
-    status.textContent = currentLanguage === "zh"
-      ? `今日已投票：${todayChoice === "bitcoin" ? "比特币" : "AI"} · 明天可再次投票`
-      : `Voted today: ${todayChoice === "bitcoin" ? "Bitcoin" : "AI"} · Come back tomorrow`;
-  } else {
-    status.textContent = currentLanguage === "zh"
-      ? "您的浏览器统计 · 今日可匿名投票"
-      : "Your browser tally · Anonymous vote available today";
+  status.textContent = voteMessage();
+}
+
+async function requestVote(choice) {
+  if (!VOTE_API.startsWith("https://")) throw new Error("Vote API is not configured");
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
+  const options = choice
+    ? {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ visitorId: visitorId(), choice }),
+        signal: controller.signal
+      }
+    : { signal: controller.signal };
+  const url = choice ? `${VOTE_API}/api/vote` : `${VOTE_API}/api/vote?visitorId=${encodeURIComponent(visitorId())}`;
+  try {
+    const response = await fetch(url, options);
+    const data = await response.json();
+    if (response.status === 429) {
+      voteState = data;
+      voteError = "rate_limited";
+      return;
+    }
+    if (!response.ok && response.status !== 409) throw new Error(data.error || `Vote API error ${response.status}`);
+    voteState = data;
+    voteError = "";
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function loadGlobalVote() {
+  voteLoading = true;
+  renderGlobalVote();
+  try {
+    await requestVote();
+  } catch (error) {
+    console.error("BTVEAI vote load failed", error);
+    voteError = "unavailable";
+  } finally {
+    voteLoading = false;
+    renderGlobalVote();
   }
 }
 
 document.querySelectorAll("[data-vote]").forEach((button) => {
-  button.addEventListener("click", () => {
-    const history = readVoteHistory();
-    const today = dayKey();
-    if (history[today]) return;
-    history[today] = button.dataset.vote;
-    localStorage.setItem(VOTE_KEY, JSON.stringify(history));
-    renderBrowserVote();
+  button.addEventListener("click", async () => {
+    if (voteLoading || voteState.votedToday || voteError) return;
+    voteLoading = true;
+    renderGlobalVote();
+    try {
+      await requestVote(button.dataset.vote);
+    } catch (error) {
+      console.error("BTVEAI vote submission failed", error);
+      voteError = "unavailable";
+    } finally {
+      voteLoading = false;
+      renderGlobalVote();
+    }
   });
 });
 
-window.addEventListener("btveai:language", renderBrowserVote);
-renderBrowserVote();
-
+window.addEventListener("btveai:language", renderGlobalVote);
+loadGlobalVote();
