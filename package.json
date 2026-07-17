@@ -5,7 +5,11 @@
   "type": "module",
   "scripts": {
     "update-data": "node scripts/update-data.mjs",
-    "test": "node scripts/validate.mjs"
+    "test": "node scripts/validate.mjs",
+    "worker:check": "wrangler deploy --dry-run --config worker/wrangler.jsonc --outdir .wrangler-check",
+    "worker:deploy": "wrangler deploy --config worker/wrangler.jsonc"
+  },
+  "devDependencies": {
+    "wrangler": "^4.111.0"
   }
 }
-
