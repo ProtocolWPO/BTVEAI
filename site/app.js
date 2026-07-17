@@ -10,7 +10,7 @@ function applyLanguage(language) {
   document.querySelectorAll("[data-placeholder-en][data-placeholder-zh]").forEach((element) => {
     element.placeholder = element.dataset[language === "zh" ? "placeholderZh" : "placeholderEn"];
   });
-  if (languageButton) languageButton.textContent = language === "en" ? "ä¸­æ–‡" : "EN";
+  if (languageButton) languageButton.textContent = language === "en" ? "中文" : "EN";
   localStorage.setItem("btveai-language", language);
   window.dispatchEvent(new CustomEvent("btveai:language", { detail: language }));
 }
@@ -60,12 +60,12 @@ function renderBrowserVote() {
   const status = document.querySelector("[data-vote-status]");
   if (todayChoice) {
     status.textContent = currentLanguage === "zh"
-      ? `ä»Šæ—¥å·²æŠ•ç¥¨ï¼š${todayChoice === "bitcoin" ? "æ¯”ç‰¹å¸" : "AI"} Â· æ˜Žå¤©å¯å†æ¬¡æŠ•ç¥¨`
-      : `Voted today: ${todayChoice === "bitcoin" ? "Bitcoin" : "AI"} Â· Come back tomorrow`;
+      ? `今日已投票：${todayChoice === "bitcoin" ? "比特币" : "AI"} · 明天可再次投票`
+      : `Voted today: ${todayChoice === "bitcoin" ? "Bitcoin" : "AI"} · Come back tomorrow`;
   } else {
     status.textContent = currentLanguage === "zh"
-      ? "æ‚¨çš„æµè§ˆå™¨ç»Ÿè®¡ Â· ä»Šæ—¥å¯åŒ¿åæŠ•ç¥¨"
-      : "Your browser tally Â· Anonymous vote available today";
+      ? "您的浏览器统计 · 今日可匿名投票"
+      : "Your browser tally · Anonymous vote available today";
   }
 }
 
