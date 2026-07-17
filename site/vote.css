@@ -1,0 +1,5 @@
+.vote-card{cursor:pointer;appearance:none;color:inherit}
+.vote-card:hover:not(:disabled){transform:translateY(-3px);border-color:#707b84}
+.vote-card:disabled{cursor:not-allowed;opacity:.58}
+.vote-card.selected{opacity:1;box-shadow:inset 0 0 0 2px currentColor}
+

@@ -1,0 +1,11 @@
+{
+  "name": "btveai-github-pages",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "update-data": "node scripts/update-data.mjs",
+    "test": "node scripts/validate.mjs"
+  }
+}
+
