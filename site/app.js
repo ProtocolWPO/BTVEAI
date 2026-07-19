@@ -18,6 +18,21 @@ function applyLanguage(language) {
 languageButton?.addEventListener("click", () => applyLanguage(currentLanguage === "en" ? "zh" : "en"));
 applyLanguage(currentLanguage);
 
+const CONTRACT_ADDRESS = "DSjUSx5fnVuygdqqtjnax1VhRppi4BQicn8xupEApump";
+document.querySelectorAll("[data-copy-contract]").forEach((button) => {
+  button.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(CONTRACT_ADDRESS);
+      button.textContent = currentLanguage === "zh" ? "已复制 ✓" : "COPIED ✓";
+    } catch {
+      button.textContent = currentLanguage === "zh" ? "复制失败" : "COPY FAILED";
+    }
+    setTimeout(() => {
+      button.textContent = currentLanguage === "zh" ? button.dataset.zh : button.dataset.en;
+    }, 1600);
+  });
+});
+
 const VOTE_API = (document.querySelector('meta[name="btveai-vote-api"]')?.content || "").replace(/\/$/, "");
 const VISITOR_KEY = "btveai-anonymous-visitor-v1";
 let voteState = { bitcoin: 0, ai: 0, total: 0, votedToday: null };
